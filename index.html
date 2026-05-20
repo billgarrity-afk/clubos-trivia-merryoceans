@@ -270,6 +270,9 @@ const TIME_BONUS_MAX = 50;
 function init() {
   buildCatGrid();
   document.getElementById('playerName').addEventListener('input', checkReady);
+  // Pre-fill from localStorage if returning player
+  const saved = localStorage.getItem('mo_player_name');
+  if (saved) { document.getElementById('playerName').value = saved; }
 }
 
 function buildCatGrid() {
@@ -292,6 +295,8 @@ function selectCat(key) {
 
 function checkReady() {
   playerName = document.getElementById('playerName').value.trim();
+  localStorage.setItem('mo_player_name', playerName);
+  localStorage.setItem('mo_player_id', localStorage.getItem('mo_player_id') || Math.random().toString(36).substr(2,10));
   document.getElementById('startBtn').disabled = !(playerName && selectedCat);
 }
 
@@ -435,7 +440,7 @@ async function endGame() {
   document.getElementById('resultsLabel').textContent = 'out of ' + (gameQuestions.length * (POINTS_PER_CORRECT + TIME_BONUS_MAX)) + ' possible';
   document.getElementById('resultsMsg').textContent = msg;
 
-  // Save to Supabase
+  // Save to Supabase trivia leaderboard
   try {
     await fetch(SUPABASE_URL + '/rest/v1/trivia_scores', {
       method: 'POST',
@@ -453,6 +458,27 @@ async function endGame() {
       })
     });
   } catch(e) { console.log('Score save failed', e); }
+
+  // Award weekend points
+  try {
+    const playerId = localStorage.getItem('mo_player_id') || playerName;
+    await fetch(SUPABASE_URL + '/rest/v1/merry_oceans_points', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': ANON_KEY,
+        'Authorization': 'Bearer ' + ANON_KEY,
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify({
+        player_id: playerId,
+        player_name: playerName,
+        points: score,
+        action: 'trivia_game',
+        property_id: 'merry-oceans'
+      })
+    });
+  } catch(e) { console.log('Points award failed', e); }
 
   // Load leaderboard
   loadLeaderboard();
