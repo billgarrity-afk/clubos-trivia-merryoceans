@@ -1,5 +1,4 @@
 {
   "version": 2,
-  "public": true,
-  "toolbarSettings": { "toolbar": "hide" }
+  "public": true
 }
